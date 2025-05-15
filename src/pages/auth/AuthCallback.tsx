@@ -28,47 +28,6 @@ const AuthCallback = () => {
           setTimeout(() => navigate('/login'), 3000);
           return;
         }
-
-        // Get the access token from the URL hash
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-        
-        if (!accessToken) {
-          // If no access token in hash, try to get the session directly
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          
-          if (sessionError) throw sessionError;
-          
-          if (session) {
-            addToast({
-              type: 'success',
-              message: 'Successfully authenticated!',
-            });
-            navigate('/');
-            return;
-          }
-          
-          // If still no session, check for code in query params (for code flow)
-          const code = queryParams.get('code');
-          if (!code) {
-            throw new Error('No authentication data found');
-          }
-        } else {
-          // If we have an access token, try to set the session
-          const { error: setSessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken || '',
-          });
-          
-          if (setSessionError) throw setSessionError;
-          
-          addToast({
-            type: 'success',
-            message: 'Successfully authenticated!',
-          });
-          navigate('/');
-          return;
-        }
         
         // The session should be automatically set by Supabase Auth
         const { data: { session }, error } = await supabase.auth.getSession();

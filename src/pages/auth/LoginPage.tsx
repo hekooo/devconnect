@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { GithubIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
-import supabase from '../../lib/supabase';
 
 interface LoginFormValues {
   email: string;
@@ -17,7 +15,6 @@ const LoginPage = () => {
   const { signIn } = useAuth();
   const { addToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [isGithubLoading, setIsGithubLoading] = useState(false);
   
   const {
     register,
@@ -47,30 +44,6 @@ const LoginPage = () => {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleGithubLogin = async () => {
-    setIsGithubLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          scopes: 'read:user user:email',
-        },
-      });
-
-      if (error) throw error;
-      
-      // The user will be redirected to GitHub for authentication
-      // No need to navigate or show success toast here
-    } catch (error) {
-      setIsGithubLoading(false);
-      addToast({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to login with GitHub',
-      });
     }
   };
 
@@ -155,36 +128,6 @@ const LoginPage = () => {
           )}
         </button>
       </form>
-
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300 dark:border-dark-400"></div>
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white dark:bg-dark-100 text-gray-500 dark:text-gray-400">
-            Or continue with
-          </span>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={handleGithubLogin}
-        disabled={isGithubLoading}
-        className="w-full flex items-center justify-center gap-2 btn-outline"
-      >
-        {isGithubLoading ? (
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-700 dark:border-gray-300 mr-2"></div>
-            Connecting...
-          </div>
-        ) : (
-          <>
-            <GithubIcon className="h-5 w-5" />
-            GitHub
-          </>
-        )}
-      </button>
 
       <p className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
         Don't have an account?{' '}

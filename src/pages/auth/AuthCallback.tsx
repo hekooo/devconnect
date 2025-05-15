@@ -10,31 +10,58 @@ const AuthCallback = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
-      // Get the auth code from the URL
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const queryParams = new URLSearchParams(window.location.search);
-      
-      // Check for errors in the URL
-      const errorParam = hashParams.get('error') || queryParams.get('error');
-      const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
-      
-      if (errorParam) {
-        setError(errorDescription || 'Authentication failed');
-        addToast({
-          type: 'error',
-          message: errorDescription || 'Authentication failed',
-        });
-        setTimeout(() => navigate('/login'), 3000);
-        return;
-      }
-
       try {
+        // Get the current URL
+        const url = window.location.href;
+        console.log("Auth callback URL:", url);
+        
+        // Check for errors in the URL
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const queryParams = new URLSearchParams(window.location.search);
+        
+        const errorParam = hashParams.get('error') || queryParams.get('error');
+        const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
+        
+        if (errorParam) {
+          setError(errorDescription || 'Authentication failed');
+          addToast({
+            type: 'error',
+            message: errorDescription || 'Authentication failed',
+          });
+          setTimeout(() => navigate('/login'), 3000);
+          return;
+        }
+
         // The session should be automatically set by Supabase Auth
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) throw error;
         
         if (session) {
+          // Create or update the user profile
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', session.user.id)
+            .maybeSingle();
+            
+          if (!existingProfile) {
+            // Create new profile
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .insert({
+                id: session.user.id,
+                username: session.user.user_metadata.preferred_username || session.user.user_metadata.user_name,
+                full_name: session.user.user_metadata.full_name || session.user.user_metadata.name,
+                avatar_url: session.user.user_metadata.avatar_url,
+                created_at: new Date().toISOString(),
+              });
+              
+            if (profileError) {
+              console.error("Error creating profile:", profileError);
+            }
+          }
+          
           addToast({
             type: 'success',
             message: 'Successfully authenticated!',

@@ -11,56 +11,83 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // The hash contains the access token and other OAuth data
+        // Get the auth code from the URL
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
+        const queryParams = new URLSearchParams(window.location.search);
         
-        if (!accessToken) {
-          // Check for error in the URL
-          const errorParam = hashParams.get('error');
-          const errorDescription = hashParams.get('error_description');
-          
-          if (errorParam) {
-            throw new Error(errorDescription || 'Authentication failed');
-          } else {
-            // If no access token and no error, something else went wrong
-            throw new Error('No access token found in the URL');
-          }
+        // Check for errors in the URL
+        const errorParam = hashParams.get('error') || queryParams.get('error');
+        const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
+        
+        if (errorParam) {
+          setError(errorDescription || 'Authentication failed');
+          addToast({
+            type: 'error',
+            message: errorDescription || 'Authentication failed',
+          });
+          setTimeout(() => navigate('/login'), 3000);
+          return;
         }
 
-        // Exchange the access token for a session
-        const { data, error } = await supabase.auth.getSession();
+        // Get the access token from the URL hash
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
         
-        if (error) throw error;
-        
-        if (data.session) {
-          addToast({
-            type: 'success',
-            message: 'Successfully authenticated with GitHub!',
-          });
-          navigate('/');
-        } else {
-          // If no session, try to set the session with the token
-          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: hashParams.get('refresh_token') || '',
-          });
+        if (!accessToken) {
+          // If no access token in hash, try to get the session directly
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
           
           if (sessionError) throw sessionError;
           
-          if (sessionData.session) {
+          if (session) {
             addToast({
               type: 'success',
-              message: 'Successfully authenticated with GitHub!',
+              message: 'Successfully authenticated!',
             });
             navigate('/');
-          } else {
-            throw new Error('Failed to establish session');
+            return;
           }
+          
+          // If still no session, check for code in query params (for code flow)
+          const code = queryParams.get('code');
+          if (!code) {
+            throw new Error('No authentication data found');
+          }
+        } else {
+          // If we have an access token, try to set the session
+          const { error: setSessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          });
+          
+          if (setSessionError) throw setSessionError;
+          
+          addToast({
+            type: 'success',
+            message: 'Successfully authenticated!',
+          });
+          navigate('/');
+          return;
+        }
+        
+        // The session should be automatically set by Supabase Auth
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+        
+        if (session) {
+          addToast({
+            type: 'success',
+            message: 'Successfully authenticated!',
+          });
+          navigate('/');
+        } else {
+          // If no session, redirect to login
+          navigate('/login');
         }
       } catch (err) {
         console.error('Error during auth callback:', err);
-        setError(err instanceof Error ? err.message : 'Failed to complete authentication');
+        setError('Failed to complete authentication');
         addToast({
           type: 'error',
           message: err instanceof Error ? err.message : 'Failed to complete authentication',

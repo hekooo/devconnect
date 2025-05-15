@@ -23,6 +23,7 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../hooks/useAuth';
 import { useUserProfile } from '../contexts/UserProfileContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import supabase from '../lib/supabase';
 
 const MainLayout: React.FC = () => {
@@ -30,8 +31,8 @@ const MainLayout: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
   const { profile } = useUserProfile();
+  const { unreadCount } = useNotifications();
 
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
@@ -43,15 +44,6 @@ const MainLayout: React.FC = () => {
 
     const fetchCounts = async () => {
       try {
-        // Unread notifications
-        const { count: notifCount, error: notifError } = await supabase
-          .from('notifications')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('is_read', false);
-        if (notifError) throw new Error(notifError.message);
-        setUnreadNotifications(notifCount || 0);
-
         // Chat IDs
         const { data: cms, error: chatError } = await supabase
           .from('chat_members')
@@ -91,11 +83,6 @@ const MainLayout: React.FC = () => {
       .channel('realtime-counts')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        () => fetchCounts()
-      )
-      .on(
-        'postgres_changes',
         { event: '*', schema: 'public', table: 'messages', filter: `sender_id=neq.${user.id}` },
         async payload => {
           try {
@@ -126,7 +113,7 @@ const MainLayout: React.FC = () => {
   const userLinks = [
     { path: '/', icon: <Home className="h-6 w-6" />, label: 'Home' },
     { path: '/explore', icon: <Search className="h-6 w-6" />, label: 'Explore' },
-    { path: '/notifications', icon: <Bell className="h-6 w-6" />, label: 'Notifications', badge: unreadNotifications },
+    { path: '/notifications', icon: <Bell className="h-6 w-6" />, label: 'Notifications', badge: unreadCount },
     { path: '/messages', icon: <MessageSquare className="h-6 w-6" />, label: 'Messages', badge: unreadMessages },
     { path: `/profile/${user?.id}`, icon: <User className="h-6 w-6" />, label: 'Profile' },
     { path: '/bookmarks', icon: <Bookmark className="h-6 w-6" />, label: 'Bookmarks' },
@@ -149,7 +136,7 @@ const MainLayout: React.FC = () => {
   const isActive = (path: string) =>
     path === '/' ? location.pathname === path : location.pathname.startsWith(path);
 
-  const defaultAvatar = `https://api.dicebear.com/7.x/avatars/svg?seed=${user?.email}`;
+  const defaultAvatar = "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
 
   const renderLink = (link: typeof links[0]) => (
     <Link
@@ -175,7 +162,7 @@ const MainLayout: React.FC = () => {
     </Link>
   );
 
-  // İlk 5 link footer’da gösterilecek
+  // İlk 5 link footer'da gösterilecek
   const mobileLinks = userLinks.slice(0, 5);
 
   const renderMobileLink = (link: typeof mobileLinks[0]) => (

@@ -137,7 +137,7 @@ const FileMessage: React.FC<FileMessageProps> = ({
       {!isOwn && showSender && (
         <Link to={`/profile/${message.sender.id}`} className="flex-shrink-0 mr-2 mt-1">
           <img
-            src={message.sender.avatar_url || `https://api.dicebear.com/7.x/avatars/svg?seed=${message.sender.username}`}
+            src={message.sender.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
             alt={message.sender.username}
             className="w-8 h-8 rounded-full"
           />
@@ -243,7 +243,7 @@ const FileMessage: React.FC<FileMessageProps> = ({
       {isOwn && showSender && (
         <Link to={`/profile/${message.sender.id}`} className="flex-shrink-0 ml-2 mt-1">
           <img
-            src={message.sender.avatar_url || `https://api.dicebear.com/7.x/avatars/svg?seed=${message.sender.username}`}
+            src={message.sender.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
             alt={message.sender.username}
             className="w-8 h-8 rounded-full"
           />

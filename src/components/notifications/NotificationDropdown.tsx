@@ -10,14 +10,7 @@ interface NotificationDropdownProps {
 }
 
 const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onClose }) => {
-  const { notifications, markAsRead, markAllAsRead } = useNotifications();
-  const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
-
-  const handleMarkAllAsRead = async () => {
-    setIsMarkingAllRead(true);
-    await markAllAsRead();
-    setIsMarkingAllRead(false);
-  };
+  const { notifications, markAsRead } = useNotifications();
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -51,29 +44,20 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onClose }) 
       <div className="p-4 border-b border-gray-200 dark:border-dark-300">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Notifications</h3>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleMarkAllAsRead}
-              disabled={isMarkingAllRead}
-              className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-            >
-              {isMarkingAllRead ? 'Marking...' : 'Mark all as read'}
-            </button>
-            <Link
-              to="/notifications"
-              className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-              onClick={onClose}
-            >
-              View all
-            </Link>
-          </div>
+          <Link
+            to="/notifications"
+            className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+            onClick={onClose}
+          >
+            View all
+          </Link>
         </div>
       </div>
 
       <div className="divide-y divide-gray-200 dark:divide-dark-300 max-h-[480px] overflow-y-auto">
         {notifications.length === 0 ? (
           <div className="p-8 text-center">
-            <Bell className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+            <Bell className="h-8 w-8 mx-auto mb-2 text-gray-400" />
             <p className="text-gray-500 dark:text-gray-400">No notifications yet</p>
           </div>
         ) : (
@@ -97,7 +81,7 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onClose }) 
                 }}
               >
                 <img
-                  src={notification.actor?.avatar_url || `https://api.dicebear.com/7.x/avatars/svg?seed=${notification.actor?.username}`}
+                  src={notification.actor?.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
                   alt={notification.actor?.username}
                   className="w-10 h-10 rounded-full"
                 />

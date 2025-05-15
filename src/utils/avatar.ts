@@ -1,5 +1,5 @@
 // src/utils/avatar.ts
 export function getUserAvatar(url: string, username: string) {
-  // Kullanıcının avatar URL’si varsa onu döndür, yoksa bir placeholder oluştur
-  return url || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}`;
+  // Return the provided URL if it exists, otherwise use the default placeholder
+  return url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
 }

@@ -11,8 +11,6 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    storageKey: 'devconnect-auth',
-    flowType: 'implicit', // Use implicit flow for OAuth
   },
   realtime: {
     params: {

@@ -41,26 +41,7 @@ const AuthCallback = () => {
           });
           navigate('/');
         } else {
-          // If no session, try to exchange the access token from the URL
-          if (hashParams.get('access_token')) {
-            const { data, error: setSessionError } = await supabase.auth.setSession({
-              access_token: hashParams.get('access_token') || '',
-              refresh_token: hashParams.get('refresh_token') || '',
-            });
-            
-            if (setSessionError) throw setSessionError;
-            
-            if (data.session) {
-              addToast({
-                type: 'success',
-                message: 'Successfully signed in!',
-              });
-              navigate('/');
-              return;
-            }
-          }
-          
-          // If still no session, redirect to login
+          // If no session, redirect to login
           navigate('/login');
         }
       } catch (err) {

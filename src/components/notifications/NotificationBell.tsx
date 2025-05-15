@@ -1,75 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../hooks/useAuth';
+import { useNotifications } from '../../contexts/NotificationContext';
 import NotificationDropdown from './NotificationDropdown';
-import supabase from '../../lib/supabase';
 
 const NotificationBell = () => {
-  const { user } = useAuth();
+  const { unreadCount } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
 
+  // Handle clicks outside the notification dropdown
   useEffect(() => {
-    if (user) {
-      fetchUnreadCount();
-      const unsub = subscribeToNotifications();
-      return unsub;
-    }
-  }, [user]);
-
-  const fetchUnreadCount = async () => {
-    setIsLoading(true);
-    try {
-      const { count, error } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user?.id)
-        .eq('is_read', false);
-
-      if (error) throw error;
-      setUnreadCount(count || 0);
-    } catch (error) {
-      console.error('Error fetching unread count:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const subscribeToNotifications = () => {
-    const channel = supabase
-      .channel('notifications_changes')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user?.id}`,
-      }, () => {
-        fetchUnreadCount();
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user?.id}`,
-      }, () => {
-        fetchUnreadCount();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
     };
-  };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleBellClick = () => {
     setIsOpen(!isOpen);
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={bellRef}>
       <button
         onClick={handleBellClick}
         className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-dark-300"
@@ -89,23 +47,16 @@ const NotificationBell = () => {
 
       <AnimatePresence>
         {isOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-30"
-              onClick={() => setIsOpen(false)}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute right-0 mt-2 w-80 z-40"
+          >
+            <NotificationDropdown 
+              onClose={() => setIsOpen(false)} 
             />
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="absolute right-0 mt-2 w-80 z-40"
-            >
-              <NotificationDropdown 
-                onClose={() => setIsOpen(false)} 
-                onNotificationRead={() => fetchUnreadCount()}
-              />
-            </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

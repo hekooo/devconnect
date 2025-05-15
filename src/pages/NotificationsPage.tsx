@@ -19,26 +19,14 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { useEmailNotifications } from '../hooks/useEmailNotifications';
+import { useNotifications } from '../contexts/NotificationContext';
 import supabase from '../lib/supabase';
 
-interface Notification {
-  id: string;
-  user_id: string;
-  actor_id: string;
-  notification_type: string;
-  entity_id: string;
-  entity_type: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
-  actor: {
-    username: string;
-    avatar_url: string;
-    full_name?: string;
-  };
+interface FollowButtonProps {
+  actorId: string;
 }
 
-const FollowButton: React.FC<{ actorId: string }> = ({ actorId }) => {
+const FollowButton: React.FC<FollowButtonProps> = ({ actorId }) => {
   const { user } = useAuth();
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -97,8 +85,14 @@ const NotificationsPage: React.FC = () => {
   const { user } = useAuth();
   const { addToast } = useToast();
   const { emailEnabled, toggleEmailNotifications } = useEmailNotifications();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { 
+    notifications, 
+    unreadCount, 
+    markAsRead, 
+    markAllAsRead, 
+    refreshNotifications 
+  } = useNotifications();
+  
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNotifications, setSelectedNotifications] = useState<Set<string>>(new Set());
@@ -107,15 +101,29 @@ const NotificationsPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
+  const [filteredNotifications, setFilteredNotifications] = useState(notifications);
 
+  // Filter notifications based on search query and filter
   useEffect(() => {
-    if (user) {
-      fetchNotifications();
-      const unsub = subscribeToNotifications();
-      return unsub;
+    let filtered = [...notifications];
+    
+    if (filter === 'unread') {
+      filtered = filtered.filter(n => !n.is_read);
     }
-  }, [user, filter, searchQuery]);
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(n => 
+        n.message.toLowerCase().includes(query) || 
+        n.actor?.username.toLowerCase().includes(query) ||
+        n.actor?.full_name?.toLowerCase().includes(query)
+      );
+    }
+    
+    setFilteredNotifications(filtered);
+  }, [notifications, filter, searchQuery]);
 
+  // Handle clicks outside the actions menu
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
@@ -126,99 +134,22 @@ const NotificationsPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchNotifications = async () => {
-    setIsLoading(true);
-    try {
-      let query = supabase
-        .from('notifications')
-        .select(`
-          *,
-          actor:profiles!actor_id (
-            username,
-            avatar_url,
-            full_name
-          )
-        `)
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false });
+  // Refresh notifications when the page loads
+  useEffect(() => {
+    refreshNotifications();
+  }, []);
 
-      if (filter === 'unread') query = query.eq('is_read', false);
-      if (searchQuery) {
-        query = query.or(
-          `message.ilike.%${searchQuery}%,actor.username.ilike.%${searchQuery}%`
-        );
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      setNotifications(data || []);
-    } catch (err) {
-      console.error(err);
-      addToast({ type: 'error', message: 'Failed to load notifications.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const subscribeToNotifications = () => {
-    const channel = supabase
-      .channel('notifications_changes')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user!.id}`,
-      }, () => {
-        fetchNotifications();
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user!.id}`,
-      }, () => {
-        fetchNotifications();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
-  const markAsRead = async (id: string) => {
-    try {
-      await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', id);
-      setNotifications(n => n.map(x => x.id === id ? { ...x, is_read: true } : x));
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  };
-
-  const markAllAsRead = async () => {
+  const handleMarkAllAsRead = async () => {
     setIsMarkingAllRead(true);
-    try {
-      await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', user!.id)
-        .eq('is_read', false);
-      setNotifications(n => n.map(x => ({ ...x, is_read: true })));
-      addToast({ type: 'success', message: 'All notifications marked as read.' });
-    } catch (error) {
-      console.error('Error marking all as read:', error);
-      addToast({ type: 'error', message: 'Failed to mark all as read.' });
-    } finally {
-      setIsMarkingAllRead(false);
-    }
+    await markAllAsRead();
+    setIsMarkingAllRead(false);
+    addToast({ type: 'success', message: 'All notifications marked as read.' });
   };
 
   const deleteNotification = async (id: string) => {
     try {
       await supabase.from('notifications').delete().eq('id', id);
-      setNotifications(n => n.filter(x => x.id !== id));
+      refreshNotifications();
       addToast({ type: 'success', message: 'Notification deleted.' });
     } catch (error) {
       console.error('Error deleting notification:', error);
@@ -231,7 +162,7 @@ const NotificationsPage: React.FC = () => {
     setIsDeleting(true);
     try {
       await supabase.from('notifications').delete().in('id', ids);
-      setNotifications(n => n.filter(x => !selectedNotifications.has(x.id)));
+      refreshNotifications();
       setSelectedNotifications(new Set());
       addToast({ type: 'success', message: `${ids.length} notification(s) deleted.` });
     } catch (error) {
@@ -252,9 +183,9 @@ const NotificationsPage: React.FC = () => {
 
   const selectAll = () => {
     setSelectedNotifications(prev =>
-      prev.size === notifications.length
+      prev.size === filteredNotifications.length
         ? new Set()
-        : new Set(notifications.map(n => n.id))
+        : new Set(filteredNotifications.map(n => n.id))
     );
   };
 
@@ -271,7 +202,7 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
-  const getNotificationLink = (notification: Notification) => {
+  const getNotificationLink = (notification: any) => {
     switch (notification.entity_type) {
       case 'post':
         return `/posts/${notification.entity_id}`;
@@ -312,8 +243,8 @@ const NotificationsPage: React.FC = () => {
             </>
           ) : (
             <button
-              onClick={markAllAsRead}
-              disabled={isMarkingAllRead}
+              onClick={handleMarkAllAsRead}
+              disabled={isMarkingAllRead || unreadCount === 0}
               className="flex items-center gap-1 px-3 py-1.5 bg-primary-100 dark:bg-primary-200 text-primary-600 rounded-full text-sm font-medium disabled:opacity-50"
             >
               {isMarkingAllRead ? (
@@ -403,57 +334,53 @@ const NotificationsPage: React.FC = () => {
             onClick={selectAll}
             className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
           >
-            {selectedNotifications.size === notifications.length && notifications.length > 0
+            {selectedNotifications.size === filteredNotifications.length && filteredNotifications.length > 0
               ? 'Deselect all'
               : 'Select all'}
           </button>
         </div>
       </div>
 
-      {/* Loading / Empty */}
-      {isLoading ? (
-        <div className="space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : notifications.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm">
-          <Bell className="h-12 w-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2">No notifications</h2>
-          <p className="text-gray-500 dark:text-gray-400">
-            {filter === 'all'
-              ? 'You don\'t have any notifications yet.'
-              : 'You don\'t have any unread notifications.'}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {notifications.map((n, idx) => (
+      {/* Notifications list */}
+      <div className="space-y-3">
+        {filteredNotifications.length === 0 ? (
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm">
+            <Bell className="h-12 w-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2">No notifications</h2>
+            <p className="text-gray-500 dark:text-gray-400">
+              {filter === 'all'
+                ? searchQuery 
+                  ? `No notifications match "${searchQuery}"`
+                  : 'You don\'t have any notifications yet.'
+                : 'You don\'t have any unread notifications.'}
+            </p>
+          </div>
+        ) : (
+          filteredNotifications.map((notification, idx) => (
             <motion.div
-              key={n.id}
+              key={notification.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
               className={`
                 group bg-white dark:bg-gray-800 rounded-xl shadow-sm
-                ${!n.is_read ? 'border-l-4 border-primary-500 dark:border-primary-500' : ''}
+                ${!notification.is_read ? 'border-l-4 border-primary-500 dark:border-primary-500' : ''}
               `}
             >
               <div className="p-4 flex items-start gap-3 relative">
                 <input
                   type="checkbox"
-                  checked={selectedNotifications.has(n.id)}
-                  onChange={() => toggleSelect(n.id)}
+                  checked={selectedNotifications.has(notification.id)}
+                  onChange={() => toggleSelect(notification.id)}
                   className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
 
                 <img
                   src={
-                    n.actor.avatar_url ||
-                    `https://api.dicebear.com/7.x/avatars/svg?seed=${n.actor.username}`
+                    notification.actor?.avatar_url ||
+                    `https://api.dicebear.com/7.x/avatars/svg?seed=${notification.actor?.username}`
                   }
-                  alt={n.actor.username}
+                  alt={notification.actor?.username}
                   className="w-10 h-10 rounded-full object-cover"
                 />
 
@@ -461,37 +388,37 @@ const NotificationsPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <Link
-                        to={getNotificationLink(n)}
+                        to={getNotificationLink(notification)}
                         className="text-gray-900 dark:text-gray-100 hover:underline"
                         onClick={() => {
-                          if (!n.is_read) {
-                            markAsRead(n.id);
+                          if (!notification.is_read) {
+                            markAsRead(notification.id);
                           }
                         }}
                       >
-                        <span className="font-medium">{n.actor.full_name || n.actor.username}</span>{' '}
-                        {n.message}
+                        <span className="font-medium">{notification.actor?.full_name || notification.actor?.username}</span>{' '}
+                        {notification.message}
                       </Link>
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                       </p>
                     </div>
-                    {n.notification_type === 'follow' && (
+                    {notification.notification_type === 'follow' && (
                       <div className="ml-4">
-                        <FollowButton actorId={n.actor_id} />
+                        <FollowButton actorId={notification.actor_id} />
                       </div>
                     )}
                     <div className="flex items-center gap-2">
-                      <div>{getIcon(n.notification_type)}</div>
-                      <div className="relative" ref={showActions === n.id ? actionsRef : undefined}>
+                      <div>{getIcon(notification.notification_type)}</div>
+                      <div className="relative" ref={showActions === notification.id ? actionsRef : undefined}>
                         <button
-                          onClick={() => setShowActions(showActions === n.id ? null : n.id)}
+                          onClick={() => setShowActions(showActions === notification.id ? null : notification.id)}
                           className="p-1 rounded-full opacity-0 group-hover:opacity-100 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </button>
                         <AnimatePresence>
-                          {showActions === n.id && (
+                          {showActions === notification.id && (
                             <motion.div
                               initial={{ opacity: 0, y: 10, scale: 0.95 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -499,10 +426,10 @@ const NotificationsPage: React.FC = () => {
                               transition={{ duration: 0.15 }}
                               className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 overflow-hidden z-10"
                             >
-                              {!n.is_read && (
+                              {!notification.is_read && (
                                 <button
                                   onClick={() => {
-                                    markAsRead(n.id);
+                                    markAsRead(notification.id);
                                     setShowActions(null);
                                   }}
                                   className="flex items-center gap-2 w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -513,7 +440,7 @@ const NotificationsPage: React.FC = () => {
                               )}
                               <button
                                 onClick={() => {
-                                  deleteNotification(n.id);
+                                  deleteNotification(notification.id);
                                   setShowActions(null);
                                 }}
                                 className="flex items-center gap-2 w-full px-4 py-2 text-sm text-error-600 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -530,9 +457,9 @@ const NotificationsPage: React.FC = () => {
                 </div>
               </div>
             </motion.div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
       {/* Delete confirmation dialog */}
       <AnimatePresence>
@@ -581,17 +508,6 @@ const NotificationsPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* No notifications message */}
-      {!isLoading && notifications.length === 0 && (
-        <div className="mt-8 text-center">
-          <BellOff className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium mb-2">No notifications yet</h3>
-          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-            When someone interacts with your content or follows you, you'll see notifications here.
-          </p>
-        </div>
-      )}
     </div>
   );
 };

@@ -354,7 +354,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ onChatSelect }) => {
             className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-dark-300 rounded-full
                        focus:outline-none focus:ring-2 focus:ring-primary-500 transition"
           />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
@@ -464,7 +464,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ onChatSelect }) => {
                     {chat.type === 'direct' ? (
                       <>
                         <img
-                          src={chat.other_member?.avatar_url || `https://api.dicebear.com/7.x/avatars/svg?seed=${chat.other_member?.username || 'user'}`}
+                          src={chat.other_member?.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
                           alt={chat.other_member?.username || 'User'}
                           className="w-12 h-12 rounded-full object-cover"
                         />
@@ -478,7 +478,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ onChatSelect }) => {
                         {chat.members?.slice(0, 3).map((m, i) => (
                           <img
                             key={m.id}
-                            src={m.avatar_url || `https://api.dicebear.com/7.x/avatars/svg?seed=${m.username}`}
+                            src={m.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
                             alt={m.username}
                             className={`w-8 h-8 rounded-full border-2 border-white dark:border-dark-100 ${
                               i === 0 ? 'z-10' : ''

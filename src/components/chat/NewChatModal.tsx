@@ -379,7 +379,7 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose, onChatCrea
                         className="flex items-center gap-1 bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-2 py-1 rounded-full text-sm"
                       >
                         <img 
-                          src={user.avatar_url || `https://api.dicebear.com/7.x/avatars/svg?seed=${user.username}`}
+                          src={user.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
                           alt={user.username}
                           className="w-4 h-4 rounded-full"
                         />
@@ -456,7 +456,7 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose, onChatCrea
                     >
                       <div className="relative">
                         <img
-                          src={u.avatar_url || `https://api.dicebear.com/7.x/avatars/svg?seed=${u.username}`}
+                          src={u.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
                           alt={u.username}
                           className="w-12 h-12 rounded-full object-cover"
                         />
@@ -550,7 +550,7 @@ const NewChatModal: React.FC<NewChatModalProps> = ({ isOpen, onClose, onChatCrea
                       className="flex items-center gap-1 bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-2 py-1 rounded-full text-sm"
                     >
                       <img 
-                        src={user.avatar_url || `https://api.dicebear.com/7.x/avatars/svg?seed=${user.username}`}
+                        src={user.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
                         alt={user.username}
                         className="w-4 h-4 rounded-full"
                       />

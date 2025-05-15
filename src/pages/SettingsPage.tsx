@@ -401,7 +401,7 @@ const SettingsPage: React.FC = () => {
                           src={
                             avatarPreview ||
                             profileData?.avatar_url ||
-                            `https://api.dicebear.com/7.x/avatars/svg?seed=${user?.email}`
+                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                           }
                           alt="Avatar"
                           className="h-20 w-20 rounded-full object-cover"

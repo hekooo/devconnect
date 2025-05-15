@@ -9,6 +9,7 @@ import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
+import { getUserAvatar } from '../../utils/avatar';
 import supabase from '../../lib/supabase';
 
 interface PostCardProps {
@@ -258,7 +259,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
       <div className="p-4 flex items-center justify-between">
         <Link to={`/profile/${post.user_id}`} className="flex items-center gap-3">
           <img
-            src={post.user?.avatar_url || `https://api.dicebear.com/7.x/avatars/svg?seed=${post.user?.username || post.user_id}`}
+            src={post.user?.avatar_url ? post.user.avatar_url : "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
             alt={post.user?.full_name || 'User'}
             className="h-10 w-10 rounded-full object-cover"
           />

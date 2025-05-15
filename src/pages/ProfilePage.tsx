@@ -336,7 +336,7 @@ const ProfilePage = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 grid grid-cols-1 sm:grid-cols-[auto,1fr] gap-4 items-center">
           <div className="relative mx-auto sm:mx-0">
             <img
-              src={profile.avatar_url || `https://api.dicebear.com/7.x/avatars/svg?seed=${profile.username}`}
+              src={profile.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
               alt={profile.full_name}
               className="h-24 w-24 sm:h-28 sm:w-28 rounded-full ring-4 ring-white dark:ring-gray-900 object-cover"
             />
@@ -545,7 +545,7 @@ const ProfilePage = () => {
                         className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-3"
                       >
                         <img
-                          src={u.avatar_url || `https://api.dicebear.com/7.x/avatars/svg?seed=${u.username}`}
+                          src={u.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
                           alt={u.full_name || u.username}
                           className="h-10 w-10 rounded-full object-cover"
                         />

@@ -154,7 +154,7 @@ const HomePage = () => {
     }
   };
 
-  const defaultAvatar = `https://api.dicebear.com/7.x/avatars/svg?seed=${user?.email}`;
+  const defaultAvatar = "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
 
   return (
     <div className="max-w-3xl mx-auto">

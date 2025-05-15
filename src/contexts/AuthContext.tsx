@@ -49,11 +49,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    return supabase.auth.signInWithPassword({ email, password });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      return { data: data.session, error: error as Error | null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
   };
 
   const signUp = async (email: string, password: string) => {
-    return supabase.auth.signUp({ email, password });
+    try {
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        }
+      });
+      return { data: data.session, error: error as Error | null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
   };
 
   const signOut = async () => {

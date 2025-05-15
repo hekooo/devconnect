@@ -18,7 +18,6 @@ const RegisterPage = () => {
   const { signUp } = useAuth();
   const { addToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [isGithubLoading, setIsGithubLoading] = useState(false);
   
   const {
     register,
@@ -55,22 +54,14 @@ const RegisterPage = () => {
   };
 
   const handleGithubSignUp = async () => {
-    setIsGithubLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
-          scopes: 'read:user user:email',
         },
       });
-
-      if (error) throw error;
-      
-      // The user will be redirected to GitHub for authentication
-      // No need to navigate or show success toast here
     } catch (error) {
-      setIsGithubLoading(false);
       addToast({
         type: 'error',
         message: error instanceof Error ? error.message : 'Failed to sign up with GitHub',
@@ -185,20 +176,10 @@ const RegisterPage = () => {
       <button
         type="button"
         onClick={handleGithubSignUp}
-        disabled={isGithubLoading}
         className="w-full flex items-center justify-center gap-2 btn-outline"
       >
-        {isGithubLoading ? (
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-700 dark:border-gray-300 mr-2"></div>
-            Connecting...
-          </div>
-        ) : (
-          <>
-            <GithubIcon className="h-5 w-5" />
-            GitHub
-          </>
-        )}
+        <GithubIcon className="h-5 w-5" />
+        GitHub
       </button>
 
       <p className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">

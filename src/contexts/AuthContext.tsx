@@ -7,12 +7,12 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{
+    data: { session: Session | null; user: User | null };
     error: Error | null;
-    data: Session | null;
   }>;
   signUp: (email: string, password: string) => Promise<{
+    data: { session: Session | null; user: User | null };
     error: Error | null;
-    data: Session | null;
   }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{
@@ -53,7 +53,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
-    return supabase.auth.signUp({ email, password });
+    return supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      }
+    });
   };
 
   const signOut = async () => {

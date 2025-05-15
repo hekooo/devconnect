@@ -12,7 +12,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { profile, isLoading: profileLoading } = useUserProfile();
   const location = useLocation();
 
-  // Henüz auth veya profile yükleniyorsa spinner göster
+  // Show spinner while auth or profile is loading
   if (authLoading || profileLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -21,17 +21,21 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // Giriş yapılmamışsa login sayfasına yönlendir
+  // Redirect to login if not authenticated
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Eğer admin ise user panel yerine admin paneline yönlendir
-  if (profile?.role === 'admin') {
-    return <Navigate to="/admin" replace />;
+  // If user is authenticated but profile doesn't exist yet, create it
+  if (user && !profile) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600" />
+      </div>
+    );
   }
 
-  // Diğer tüm normal kullanıcılar için child component render et
+  // Render children for authenticated users
   return <>{children}</>;
 };
 

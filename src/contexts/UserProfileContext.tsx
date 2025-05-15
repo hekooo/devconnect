@@ -1,6 +1,7 @@
 // src/contexts/UserProfileContext.tsx
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 import supabase from '../lib/supabase';
 
 interface UserProfile {
@@ -17,12 +18,14 @@ interface UserProfileContextType {
   isLoading: boolean;
   error: Error | null;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: any }>;
+  refreshProfile: () => Promise<void>;
 }
 
 const UserProfileContext = createContext<UserProfileContextType | undefined>(undefined);
 
 export function UserProfileProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -52,14 +55,34 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
           .maybeSingle();
 
         if (fetchErr) throw fetchErr;
+        
         if (!data) {
-          console.warn('Profile not found for user:', user.id);
-          setProfile(null);
+          console.log('Profile not found, creating new profile for user:', user.id);
+          // Create a new profile if one doesn't exist
+          const username = user.email?.split('@')[0] || `user_${Math.random().toString(36).substring(2, 10)}`;
+          const newProfile = {
+            id: user.id,
+            username,
+            full_name: user.user_metadata?.full_name || username,
+            avatar_url: user.user_metadata?.avatar_url || null,
+            bio: '',
+            role: 'user'
+          };
+          
+          const { data: createdProfile, error: createErr } = await supabase
+            .from('profiles')
+            .insert(newProfile)
+            .select()
+            .single();
+            
+          if (createErr) throw createErr;
+          
+          if (!isCancelled) setProfile(createdProfile);
         } else {
-          setProfile(data);
+          if (!isCancelled) setProfile(data);
         }
       } catch (err) {
-        console.error('Error fetching profile:', err);
+        console.error('Error fetching/creating profile:', err);
         if (!isCancelled) setError(err instanceof Error ? err : new Error(String(err)));
       } finally {
         if (!isCancelled) setIsLoading(false);
@@ -117,8 +140,29 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
     }
   };
 
+  const refreshProfile = async () => {
+    if (!user?.id) return;
+    
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url, bio, role')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) throw error;
+      setProfile(data);
+    } catch (err) {
+      console.error('Error refreshing profile:', err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <UserProfileContext.Provider value={{ profile, isLoading, error, updateProfile }}>
+    <UserProfileContext.Provider value={{ profile, isLoading, error, updateProfile, refreshProfile }}>
       {children}
     </UserProfileContext.Provider>
   );

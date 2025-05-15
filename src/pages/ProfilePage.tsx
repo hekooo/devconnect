@@ -27,6 +27,7 @@ import FollowButton from '../components/profile/FollowButton';
 import ProfileReelsTab from './profile/ProfileReelsTab';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
+import { getUserAvatar } from '../utils/avatar';
 import supabase from '../lib/supabase';
 
 type ProfileTab = 'posts' | 'blogs' | 'questions' | 'following' | 'followers' | 'reels';
@@ -76,30 +77,40 @@ const ProfilePage = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [isUpdatingPrivacy, setIsUpdatingPrivacy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Use user.id as fallback if id param is not provided
+  const profileId = id || user?.id;
 
   useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    fetchProfile();
-    fetchContent();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, activeTab]);
+    if (profileId) {
+      setIsLoading(true);
+      setError(null);
+      fetchProfile();
+    }
+  }, [profileId]);
 
   useEffect(() => {
-    if (user && id) {
+    if (profileId && profile) {
+      fetchContent();
+    }
+  }, [profileId, activeTab, profile]);
+
+  useEffect(() => {
+    if (user && profileId) {
       checkFollowStatus();
     }
-  }, [user, id]);
+  }, [user, profileId]);
 
   const checkFollowStatus = async () => {
-    if (!user || !id) return;
+    if (!user || !profileId || user.id === profileId) return;
     
     try {
       const { data, error } = await supabase
         .from('follows')
         .select()
         .eq('follower_id', user.id)
-        .eq('following_id', id)
+        .eq('following_id', profileId)
         .maybeSingle();
       
       if (error) throw error;
@@ -114,38 +125,46 @@ const ProfilePage = () => {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', id)
+        .eq('id', profileId)
         .single();
-      if (profileError) throw profileError;
+      
+      if (profileError) {
+        if (profileError.code === 'PGRST116') {
+          setError('Profile not found');
+        } else {
+          throw profileError;
+        }
+        return;
+      }
 
       const { count: followerCount, error: followerError } = await supabase
         .from('follows')
         .select('*', { count: 'exact', head: true })
-        .eq('following_id', id);
+        .eq('following_id', profileId);
       if (followerError) throw followerError;
 
       const { count: followingCount, error: followingError } = await supabase
         .from('follows')
         .select('*', { count: 'exact', head: true })
-        .eq('follower_id', id);
+        .eq('follower_id', profileId);
       if (followingError) throw followingError;
 
       const { count: postCount, error: postError } = await supabase
         .from('posts')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', id);
+        .eq('user_id', profileId);
       if (postError) throw postError;
 
       const { count: questionCount, error: questionError } = await supabase
         .from('questions')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', id);
+        .eq('user_id', profileId);
       if (questionError) throw questionError;
 
       const { count: reelsCount, error: reelsError } = await supabase
         .from('developer_reels')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', id);
+        .eq('user_id', profileId);
       if (reelsError) throw reelsError;
 
       setReelCount(reelsCount || 0);
@@ -157,14 +176,17 @@ const ProfilePage = () => {
         questionCount: questionCount || 0,
       });
       setIsPrivate(profileData.is_private || false);
+      setIsLoading(false);
     } catch (error) {
       console.error('Error fetching profile:', error);
       addToast({ type: 'error', message: 'Failed to load profile' });
+      setIsLoading(false);
+      setError('Failed to load profile');
     }
   };
 
   const fetchContent = async () => {
-    if (!id) return;
+    if (!profileId || !profile) return;
 
     // If profile is private and user is not the owner or a follower, don't fetch content
     if (isPrivate && !isOwnProfile && !isFollowing) {
@@ -179,14 +201,14 @@ const ProfilePage = () => {
           query = supabase
             .from('posts')
             .select(`*, user:profiles!posts_user_id_fkey(id,username,full_name,avatar_url)`)
-            .eq('user_id', id)
+            .eq('user_id', profileId)
             .order('created_at', { ascending: false });
           break;
         case 'blogs':
           query = supabase
             .from('posts')
             .select(`*, user:profiles!posts_user_id_fkey(id,username,full_name,avatar_url)`)
-            .eq('user_id', id)
+            .eq('user_id', profileId)
             .eq('post_type', 'blog')
             .order('created_at', { ascending: false });
           break;
@@ -194,20 +216,20 @@ const ProfilePage = () => {
           query = supabase
             .from('questions')
             .select(`*, user:profiles!questions_user_id_fkey(id,username,full_name,avatar_url)`)
-            .eq('user_id', id)
+            .eq('user_id', profileId)
             .order('created_at', { ascending: false });
           break;
         case 'following':
           query = supabase
             .from('follows')
             .select('following:profiles(id, username, full_name, avatar_url)')
-            .eq('follower_id', id);
+            .eq('follower_id', profileId);
           break;
         case 'followers':
           query = supabase
             .from('follows')
             .select('follower:profiles(id, username, full_name, avatar_url)')
-            .eq('following_id', id);
+            .eq('following_id', profileId);
           break;
         case 'reels':
           setIsLoading(false);
@@ -294,7 +316,7 @@ const ProfilePage = () => {
     }
   };
 
-  if (isLoading && !profile) {
+  if (isLoading) {
     return (
       <div className="animate-pulse p-4 space-y-4">
         <div className="h-48 bg-gray-200 dark:bg-gray-800 rounded-md" />
@@ -303,11 +325,15 @@ const ProfilePage = () => {
     );
   }
 
-  if (!profile) {
+  if (error || !profile) {
     return (
       <div className="py-12 text-center">
+        <AlertCircle className="h-16 w-16 mx-auto text-error-500 mb-4" />
         <h2 className="text-2xl font-semibold">Profile not found</h2>
-        <p className="text-gray-500">The profile you're looking for doesn't exist.</p>
+        <p className="text-gray-500 mt-2">The profile you're looking for doesn't exist or has been removed.</p>
+        <Link to="/" className="mt-6 inline-block px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">
+          Return to Home
+        </Link>
       </div>
     );
   }
@@ -392,7 +418,7 @@ const ProfilePage = () => {
                   <FollowButton userId={profile.id} onFollowChange={(following) => setIsFollowing(following)} />
                   {isFollowing && (
                     <Link
-                      to={`/messages/${id}`}
+                      to={`/messages/${profileId}`}
                       className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition"
                     >
                       <MessageSquare className="h-4 w-4 mr-1" /> Message
@@ -504,7 +530,7 @@ const ProfilePage = () => {
 
               <div className="space-y-6">
                 {activeTab === 'reels' && (
-                  <ProfileReelsTab userId={id!} isOwnProfile={isOwnProfile} />
+                  <ProfileReelsTab userId={profileId!} isOwnProfile={isOwnProfile} />
                 )}
 
                 {(activeTab === 'posts' || activeTab === 'blogs') && (
@@ -525,7 +551,7 @@ const ProfilePage = () => {
                     {posts.map(q => (
                       <div key={q.id} className="relative">
                         <div className="absolute top-2 right-2 z-10">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
                             <MessageSquare className="h-3 w-3 mr-1" />
                             Q&A
                           </span>

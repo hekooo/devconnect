@@ -1,7 +1,5 @@
 # DevConnect
 
-![DevConnect Logo](https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png)
-
 ## 🚀 Overview
 
 DevConnect is a comprehensive social platform built specifically for developers. It provides a space for tech professionals to connect, share knowledge, ask questions, and build their professional network.
@@ -15,6 +13,19 @@ DevConnect is a comprehensive social platform built specifically for developers.
 - **Real-time Chat**: Connect with other developers through direct and group messaging
 - **Stories**: Share ephemeral content that disappears after 24 hours
 - **User Profiles**: Showcase your skills, tech stack, and professional experience
+
+## 📸 Screenshots
+
+<div align="center">
+  <img src="1.png" alt="Screenshot" width="800"/>
+  <img src="2.png" alt="Screenshot" width="800"/>
+  <img src="3.png" alt="Screenshot" width="800"/>
+  <img src="4.png" alt="Screenshot" width="800"/>
+  <img src="5.png" alt="Screenshot" width="800"/>
+  <img src="6.png" alt="Screenshot" width="800"/>
+  <img src="7.png" alt="Screenshot" width="800"/>
+  <img src="8.png" alt="Screenshot" width="800"/>
+</div>
 
 ## 🛠️ Technology Stack
 

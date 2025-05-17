@@ -17,7 +17,7 @@ DevConnect is a comprehensive social platform built specifically for developers.
 ## 📸 Screenshots
 
 <div align="center">
-  <img src="1.png" alt="Screenshot" width="800"/>
+  <img src="/1.png" alt="Screenshot" width="800"/>
   <img src="2.png" alt="Screenshot" width="800"/>
   <img src="3.png" alt="Screenshot" width="800"/>
   <img src="4.png" alt="Screenshot" width="800"/>

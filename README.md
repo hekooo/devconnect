@@ -16,24 +16,6 @@ DevConnect is a comprehensive social platform built specifically for developers.
 - **Stories**: Share ephemeral content that disappears after 24 hours
 - **User Profiles**: Showcase your skills, tech stack, and professional experience
 
-## 📸 Screenshots
-
-### Home Feed & Social Features
-![Home Feed](1.png)
-![Social Features](2.png)
-
-### Developer Reels
-![Developer Reels](3.png)
-![Reel Details](4.png)
-
-### Q&A Platform
-![Questions and Answers](5.png)
-![Detailed Question View](6.png)
-
-### Messaging & Profiles
-![Real-time Chat](7.png)
-![User Profiles](8.png)
-
 ## 🛠️ Technology Stack
 
 - **Frontend**: React, TypeScript, Tailwind CSS, Framer Motion
